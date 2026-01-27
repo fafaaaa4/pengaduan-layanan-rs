@@ -1,0 +1,4 @@
+config.php
+kuesioner_log.json
+*.log
+.env
