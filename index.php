@@ -3,14 +3,9 @@ session_start();
 
 require_once "config.php";
 
-$conn = pg_connect(
-  "host=$db_host port=$db_port dbname=$db_name user=$db_user password=$db_pass"
-);
-
-if (!$conn) {
-  die("Koneksi gagal");
-}
-
+/* =========================
+   KONEKSI POSTGRESQL (1x saja)
+   ========================= */
 $conn = pg_connect("host=$db_host port=$db_port dbname=$db_name user=$db_user password=$db_pass");
 if (!$conn) {
   die("Koneksi PostgreSQL gagal: " . htmlspecialchars(pg_last_error()));
@@ -26,33 +21,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     'nama_pasien',
     'alamat',
     'nomor_hp',
-    'q1',
-    'q2',
-    'q3',
-    'q4',
-    'q5',
-    'q6',
-    'q7',
-    'q8',
-    'q9'
+    'q1','q2','q3','q4','q5','q6','q7','q8','q9'
   ];
 
   $is_valid = true;
   foreach ($required_fields as $field) {
-    if (!isset($_POST[$field]) || empty(trim((string)$_POST[$field]))) {
+    if (!isset($_POST[$field]) || trim((string)$_POST[$field]) === '') {
       $is_valid = false;
       break;
     }
   }
 
-  if (!isset($_POST['jobs']) || count($_POST['jobs']) === 0) $is_valid = false;
-  if (!isset($_POST['services']) || count($_POST['services']) === 0) $is_valid = false;
+  // jobs masih boleh lebih dari 1 (checkbox)
+  if (!isset($_POST['jobs']) || count((array)$_POST['jobs']) === 0) $is_valid = false;
+
+  // layanan sekarang 1 pilihan (radio)
+  if (!isset($_POST['service']) || trim((string)$_POST['service']) === '') $is_valid = false;
 
   if ($is_valid) {
 
-    // simpan jobs/services jadi string: "pns,swasta" / "igd,lab"
     $jobs = implode(',', array_map('trim', (array)$_POST['jobs']));
-    $services = implode(',', array_map('trim', (array)$_POST['services']));
+    $service = trim((string)$_POST['service']); // satu pilihan saja
 
     $sql = "INSERT INTO kuesioner
       (survey_date, survey_time, gender, education, jobs, services,
@@ -69,7 +58,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       $_POST['gender'],
       $_POST['education'],
       $jobs,
-      $services,
+      $service, // kolom DB tetap "services", tapi isi 1 layanan
       (int)$_POST['q1'],
       (int)$_POST['q2'],
       (int)$_POST['q3'],
@@ -151,7 +140,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             </select>
           </div>
         </div>
-
 
         <h2 class="section-title">Profil Pasien</h2>
         <div class="profile-section">
@@ -243,45 +231,49 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             </div>
           </div>
 
-          <div class="form-row">
-            <div class="form-field">
-              <label>Jenis Layanan * <span style="color: #e74c3c;">(Pilih salah satu atau lebih)</span></label>
-              <div class="checkbox-group">
-                <div class="checkbox-option">
-                  <input type="checkbox" id="admissi" name="services[]" value="admissi">
-                  <label for="admissi">ADMISI</label>
-                </div>
-                <div class="checkbox-option">
-                  <input type="checkbox" id="igd" name="services[]" value="igd">
-                  <label for="igd">IGD</label>
-                </div>
-                <div class="checkbox-option">
-                  <input type="checkbox" id="lab" name="services[]" value="lab">
-                  <label for="lab">LABORATORIUM</label>
-                </div>
-                <div class="checkbox-option">
-                  <input type="checkbox" id="farmasi" name="services[]" value="farmasi">
-                  <label for="farmasi">FARMASI</label>
-                </div>
-                <div class="checkbox-option">
-                  <input type="checkbox" id="radiologi" name="services[]" value="radiologi">
-                  <label for="radiologi">RADIOLOGI</label>
-                </div>
-                <div class="checkbox-option">
-                  <input type="checkbox" id="gizi" name="services[]" value="gizi">
-                  <label for="gizi">GIZI</label>
-                </div>
-                <div class="checkbox-option">
-                  <input type="checkbox" id="icu" name="services[]" value="icu">
-                  <label for="icu">ICU</label>
-                </div>
-                <div class="checkbox-option">
-                  <input type="checkbox" id="operasi" name="services[]" value="operasi">
-                  <label for="operasi">OPERASI</label>
-                </div>
-                <div class="checkbox-option">
-                  <input type="checkbox" id="rawat_jalan" name="services[]" value="rawat_jalan">
-                  <label for="rawat_jalan">RAWAT JALAN</label>
+          <!-- =========================
+               JENIS LAYANAN (RADIO)
+               ========================= -->
+            <div class="form-row">
+              <div class="form-field">
+                <label>Jenis Layanan * <span style="color: #e74c3c;">(Pilih salah satu)</span></label>
+                <div class="radio-group">
+                  <div class="radio-option">
+                    <input type="radio" id="admissi" name="service" value="admissi" required>
+                    <label for="admissi">ADMISI</label>
+                  </div>
+                  <div class="radio-option">
+                    <input type="radio" id="igd" name="service" value="igd">
+                    <label for="igd">IGD</label>
+                  </div>
+                  <div class="radio-option">
+                    <input type="radio" id="lab" name="service" value="lab">
+                    <label for="lab">LABORATORIUM</label>
+                  </div>
+                  <div class="radio-option">
+                    <input type="radio" id="farmasi" name="service" value="farmasi">
+                    <label for="farmasi">FARMASI</label>
+                  </div>
+                  <div class="radio-option">
+                    <input type="radio" id="radiologi" name="service" value="radiologi">
+                    <label for="radiologi">RADIOLOGI</label>
+                  </div>
+                  <div class="radio-option">
+                    <input type="radio" id="gizi" name="service" value="gizi">
+                    <label for="gizi">GIZI</label>
+                  </div>
+                  <div class="radio-option">
+                    <input type="radio" id="icu" name="service" value="icu">
+                    <label for="icu">ICU</label>
+                  </div>
+                  <div class="radio-option">
+                    <input type="radio" id="operasi" name="service" value="operasi">
+                    <label for="operasi">OPERASI</label>
+                  </div>
+                  <div class="radio-option">
+                    <input type="radio" id="rawat_jalan" name="service" value="rawat_jalan">
+                    <label for="rawat_jalan">RAWAT JALAN</label>
+                  </div>
                 </div>
               </div>
             </div>
