@@ -34,6 +34,11 @@ pengaduan-layanan-rs/
 └── images/
 └── logo.png
 
+## buka php.ini cari 
+- ;extension=pgsql
+- ;extension=pdo_pgsql
+dan hilangkan ;
+lalu, ctrl+save
 
 ---
 
@@ -70,9 +75,9 @@ $db_port = "5432";
 $db_name = "pengaduanlayanan";
 $db_user = "postgres";
 $db_pass = "PASSWORD_DATABASE_KAMU";
-
----
+```
 
 ### 6. Akses Aplikasi
 Buka browser dan jalankan:
 http://localhost/pengaduan-layanan-rs/index.php
+
