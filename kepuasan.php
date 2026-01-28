@@ -10,10 +10,28 @@ if (!$conn) {
   die("Koneksi PostgreSQL gagal: " . htmlspecialchars(pg_last_error()));
 }
 
+/* =========================
+   LOCK SERVICE VIA URL ?service=...
+   ========================= */
+$allowed_services = [
+  'admisi','igd','lab','farmasi','radiologi','gizi','icu','operasi','rawat_jalan'
+];
+
+$service_locked = false;
+$service_from_url = '';
+
+if (isset($_GET['service'])) {
+  $candidate = strtolower(trim((string)$_GET['service']));
+  if (in_array($candidate, $allowed_services, true)) {
+    $service_locked = true;
+    $service_from_url = $candidate;
+  }
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
   // Field teks wajib (bukan angka)
-  $requiredText = ['surveyDate','surveyTime','gender','education','service','penjamin'];
+  $requiredText = ['surveyDate','surveyTime','gender','education','penjamin'];
   $valid = true;
 
   foreach ($requiredText as $r) {
@@ -22,6 +40,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       break;
     }
   }
+
+  // Ambil service (kalau locked, ambil dari URL dan abaikan POST)
+  $service_value = $service_locked ? $service_from_url : trim((string)($_POST['service'] ?? ''));
+  if ($service_value === '') $valid = false;
 
   // jobs checkbox minimal 1
   if (!isset($_POST['jobs']) || count((array)$_POST['jobs']) === 0) {
@@ -65,7 +87,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       $_POST['gender'],
       $_POST['education'],
       $jobs,
-      $_POST['service'],
+      $service_value,
       (int)$_POST['q1'],
       (int)$_POST['q2'],
       (int)$_POST['q3'],
@@ -186,19 +208,90 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             </div>
           </div>
 
+          <!-- =========================
+               JENIS LAYANAN (RADIO) + LOCK
+               ========================= -->
           <div class="form-row">
             <div class="form-field">
               <label>Jenis Layanan * <span style="color:#e74c3c;">(Pilih salah satu)</span></label>
+
+              <?php if ($service_locked): ?>
+                <div class="complaint-note" style="margin-top:10px;">
+                  Jenis layanan sudah ditentukan oleh link dan tidak bisa diubah.
+                </div>
+                <!-- radio disabled gak ikut POST, jadi kirim via hidden -->
+                <input type="hidden" name="service" value="<?php echo htmlspecialchars($service_from_url); ?>">
+              <?php endif; ?>
+
               <div class="radio-group">
-                <div class="radio-option"><input type="radio" id="admissi" name="service" value="admissi" required><label for="admissi">ADMISI</label></div>
-                <div class="radio-option"><input type="radio" id="igd" name="service" value="igd"><label for="igd">IGD</label></div>
-                <div class="radio-option"><input type="radio" id="lab" name="service" value="lab"><label for="lab">LABORATORIUM</label></div>
-                <div class="radio-option"><input type="radio" id="farmasi" name="service" value="farmasi"><label for="farmasi">FARMASI</label></div>
-                <div class="radio-option"><input type="radio" id="radiologi" name="service" value="radiologi"><label for="radiologi">RADIOLOGI</label></div>
-                <div class="radio-option"><input type="radio" id="gizi" name="service" value="gizi"><label for="gizi">GIZI</label></div>
-                <div class="radio-option"><input type="radio" id="icu" name="service" value="icu"><label for="icu">ICU</label></div>
-                <div class="radio-option"><input type="radio" id="operasi" name="service" value="operasi"><label for="operasi">OPERASI</label></div>
-                <div class="radio-option"><input type="radio" id="rawat_jalan" name="service" value="rawat_jalan"><label for="rawat_jalan">RAWAT JALAN</label></div>
+                <?php
+                  function svc_checked($svc, $current) { return $svc === $current ? 'checked' : ''; }
+                  function svc_disabled($locked) { return $locked ? 'disabled' : ''; }
+                  $current_service = $service_locked ? $service_from_url : '';
+                ?>
+
+                <div class="radio-option">
+                  <input type="radio" id="admisi" name="service" value="admisi"
+                    <?php echo svc_checked('admisi', $current_service); ?>
+                    <?php echo $service_locked ? 'disabled' : 'required'; ?>>
+                  <label for="admisi">ADMISI</label>
+                </div>
+
+                <div class="radio-option">
+                  <input type="radio" id="igd" name="service" value="igd"
+                    <?php echo svc_checked('igd', $current_service); ?>
+                    <?php echo svc_disabled($service_locked); ?>>
+                  <label for="igd">IGD</label>
+                </div>
+
+                <div class="radio-option">
+                  <input type="radio" id="lab" name="service" value="lab"
+                    <?php echo svc_checked('lab', $current_service); ?>
+                    <?php echo svc_disabled($service_locked); ?>>
+                  <label for="lab">LABORATORIUM</label>
+                </div>
+
+                <div class="radio-option">
+                  <input type="radio" id="farmasi" name="service" value="farmasi"
+                    <?php echo svc_checked('farmasi', $current_service); ?>
+                    <?php echo svc_disabled($service_locked); ?>>
+                  <label for="farmasi">FARMASI</label>
+                </div>
+
+                <div class="radio-option">
+                  <input type="radio" id="radiologi" name="service" value="radiologi"
+                    <?php echo svc_checked('radiologi', $current_service); ?>
+                    <?php echo svc_disabled($service_locked); ?>>
+                  <label for="radiologi">RADIOLOGI</label>
+                </div>
+
+                <div class="radio-option">
+                  <input type="radio" id="gizi" name="service" value="gizi"
+                    <?php echo svc_checked('gizi', $current_service); ?>
+                    <?php echo svc_disabled($service_locked); ?>>
+                  <label for="gizi">GIZI</label>
+                </div>
+
+                <div class="radio-option">
+                  <input type="radio" id="icu" name="service" value="icu"
+                    <?php echo svc_checked('icu', $current_service); ?>
+                    <?php echo svc_disabled($service_locked); ?>>
+                  <label for="icu">ICU</label>
+                </div>
+
+                <div class="radio-option">
+                  <input type="radio" id="operasi" name="service" value="operasi"
+                    <?php echo svc_checked('operasi', $current_service); ?>
+                    <?php echo svc_disabled($service_locked); ?>>
+                  <label for="operasi">OPERASI</label>
+                </div>
+
+                <div class="radio-option">
+                  <input type="radio" id="rawat_jalan" name="service" value="rawat_jalan"
+                    <?php echo svc_checked('rawat_jalan', $current_service); ?>
+                    <?php echo svc_disabled($service_locked); ?>>
+                  <label for="rawat_jalan">RAWAT JALAN</label>
+                </div>
               </div>
             </div>
           </div>
@@ -219,82 +312,43 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <div class="scale-note">Skala Penilaian: 1 = Tidak Sesuai | 2 = Kurang Sesuai | 3 = Sesuai | 4 = Sangat Sesuai</div>
 
         <div class="questions-section">
-          <!-- q1..q3 sama seperti punyamu -->
-            <div class="question-card">
+
+          <div class="question-card">
             <div class="question-text">
-            1. Bagaimana pendapat saudara tentang kesesuaian persyaratan pelayanan dengan jenis pelayanannya?
+              1. Bagaimana pendapat saudara tentang kesesuaian persyaratan pelayanan dengan jenis pelayanannya?
             </div>
             <div class="question-options">
-            <div class="option">
-                <input type="radio" name="q1" value="1" required>
-                <label>1</label>
+              <div class="option"><input type="radio" name="q1" value="1" required><label>1</label></div>
+              <div class="option"><input type="radio" name="q1" value="2"><label>2</label></div>
+              <div class="option"><input type="radio" name="q1" value="3"><label>3</label></div>
+              <div class="option"><input type="radio" name="q1" value="4"><label>4</label></div>
             </div>
-            <div class="option">
-                <input type="radio" name="q1" value="2">
-                <label>2</label>
-            </div>
-            <div class="option">
-                <input type="radio" name="q1" value="3">
-                <label>3</label>
-            </div>
-            <div class="option">
-                <input type="radio" name="q1" value="4">
-                <label>4</label>
-            </div>
-            </div>
-        </div>
+          </div>
 
-
-        <div class="question-card">
+          <div class="question-card">
             <div class="question-text">
-            2. Bagaimana pemahaman Anda tentang kemudahan prosedur pelayanan di unit ini?
+              2. Bagaimana pemahaman Anda tentang kemudahan prosedur pelayanan di unit ini?
             </div>
             <div class="question-options">
-            <div class="option">
-                <input type="radio" name="q2" value="1" required>
-                <label>1</label>
+              <div class="option"><input type="radio" name="q2" value="1" required><label>1</label></div>
+              <div class="option"><input type="radio" name="q2" value="2"><label>2</label></div>
+              <div class="option"><input type="radio" name="q2" value="3"><label>3</label></div>
+              <div class="option"><input type="radio" name="q2" value="4"><label>4</label></div>
             </div>
-            <div class="option">
-                <input type="radio" name="q2" value="2">
-                <label>2</label>
-            </div>
-            <div class="option">
-                <input type="radio" name="q2" value="3">
-                <label>3</label>
-            </div>
-            <div class="option">
-                <input type="radio" name="q2" value="4">
-                <label>4</label>
-            </div>
-            </div>
-        </div>
+          </div>
 
-
-        <div class="question-card">
+          <div class="question-card">
             <div class="question-text">
-            3. Bagaimana pendapat Anda tentang kecepatan waktu dalam memberikan pelayanan?
+              3. Bagaimana pendapat Anda tentang kecepatan waktu dalam memberikan pelayanan?
             </div>
             <div class="question-options">
-            <div class="option">
-                <input type="radio" name="q3" value="1" required>
-                <label>1</label>
+              <div class="option"><input type="radio" name="q3" value="1" required><label>1</label></div>
+              <div class="option"><input type="radio" name="q3" value="2"><label>2</label></div>
+              <div class="option"><input type="radio" name="q3" value="3"><label>3</label></div>
+              <div class="option"><input type="radio" name="q3" value="4"><label>4</label></div>
             </div>
-            <div class="option">
-                <input type="radio" name="q3" value="2">
-                <label>2</label>
-            </div>
-            <div class="option">
-                <input type="radio" name="q3" value="3">
-                <label>3</label>
-            </div>
-            <div class="option">
-                <input type="radio" name="q3" value="4">
-                <label>4</label>
-            </div>
-            </div>
-        </div>
+          </div>
 
-          <!-- q4 dikasih id biar bisa disable saat BPJS -->
           <div class="question-card" id="question-q4">
             <div class="question-text">4. Bagaimana pendapat Anda tentang kewajaran biaya/tarif dalam pelayanan?</div>
             <div class="question-options">
@@ -305,138 +359,74 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             </div>
           </div>
 
-          <!-- q5..q9 sama seperti punyamu -->
           <div class="question-card">
             <div class="question-text">
-            5. Bagaimana pendapat Anda tentang kesesuaian produk pelayanan antara yang tercantum dalam standar pelayanan dengan hasil yang diberikan?
+              5. Bagaimana pendapat Anda tentang kesesuaian produk pelayanan antara yang tercantum dalam standar pelayanan dengan hasil yang diberikan?
             </div>
             <div class="question-options">
-            <div class="option">
-                <input type="radio" name="q5" value="1" required>
-                <label>1</label>
+              <div class="option"><input type="radio" name="q5" value="1" required><label>1</label></div>
+              <div class="option"><input type="radio" name="q5" value="2"><label>2</label></div>
+              <div class="option"><input type="radio" name="q5" value="3"><label>3</label></div>
+              <div class="option"><input type="radio" name="q5" value="4"><label>4</label></div>
             </div>
-            <div class="option">
-                <input type="radio" name="q5" value="2">
-                <label>2</label>
-            </div>
-            <div class="option">
-                <input type="radio" name="q5" value="3">
-                <label>3</label>
-            </div>
-            <div class="option">
-                <input type="radio" name="q5" value="4">
-                <label>4</label>
-            </div>
-            </div>
-        </div>
-
-
-        <div class="question-card">
-            <div class="question-text">
-            6. Bagaimana pendapat Anda tentang kompetensi/kemampuan petugas dalam pelayanan?
-            </div>
-            <div class="question-options">
-            <div class="option">
-                <input type="radio" name="q6" value="1" required>
-                <label>1</label>
-            </div>
-            <div class="option">
-                <input type="radio" name="q6" value="2">
-                <label>2</label>
-            </div>
-            <div class="option">
-                <input type="radio" name="q6" value="3">
-                <label>3</label>
-            </div>
-            <div class="option">
-                <input type="radio" name="q6" value="4">
-                <label>4</label>
-            </div>
-            </div>
-        </div>
-
-
-        <div class="question-card">
-            <div class="question-text">
-            7. Bagaimana pendapat Anda tentang perilaku petugas dalam pelayanan terkait kesopanan dan keramahan?
-            </div>
-            <div class="question-options">
-            <div class="option">
-                <input type="radio" name="q7" value="1" required>
-                <label>1</label>
-            </div>
-            <div class="option">
-                <input type="radio" name="q7" value="2">
-                <label>2</label>
-            </div>
-            <div class="option">
-                <input type="radio" name="q7" value="3">
-                <label>3</label>
-            </div>
-            <div class="option">
-                <input type="radio" name="q7" value="4">
-                <label>4</label>
-            </div>
-            </div>
-        </div>
-
-
-        <div class="question-card">
-            <div class="question-text">
-            8. Bagaimana pendapat Anda tentang kualitas sarana dan prasarana?
-            </div>
-            <div class="question-options">
-            <div class="option">
-                <input type="radio" name="q8" value="1" required>
-                <label>1</label>
-            </div>
-            <div class="option">
-                <input type="radio" name="q8" value="2">
-                <label>2</label>
-            </div>
-            <div class="option">
-                <input type="radio" name="q8" value="3">
-                <label>3</label>
-            </div>
-            <div class="option">
-                <input type="radio" name="q8" value="4">
-                <label>4</label>
-            </div>
-            </div>
-        </div>
-
-
-        <div class="question-card">
-            <div class="question-text">
-            9. Bagaimana pendapat Anda tentang penanganan pengaduan pengguna layanan?
-            </div>
-            <div class="question-options">
-            <div class="option">
-                <input type="radio" name="q9" value="1" required>
-                <label>1</label>
-            </div>
-            <div class="option">
-                <input type="radio" name="q9" value="2">
-                <label>2</label>
-            </div>
-            <div class="option">
-                <input type="radio" name="q9" value="3">
-                <label>3</label>
-            </div>
-            <div class="option">
-                <input type="radio" name="q9" value="4">
-                <label>4</label>
-            </div>
-            </div>
-        </div>
-        </div>
-
-        <!-- hidden khusus indikator bpjs (BUKAN name="q4") -->
-        <input type="hidden" name="q4_bpjs" id="q4-bpjs" value="">
-        <div class="complaint-note">
-            Masukan Anda sangat berarti bagi kami untuk meningkatkan kualitas layanan
           </div>
+
+          <div class="question-card">
+            <div class="question-text">
+              6. Bagaimana pendapat Anda tentang kompetensi/kemampuan petugas dalam pelayanan?
+            </div>
+            <div class="question-options">
+              <div class="option"><input type="radio" name="q6" value="1" required><label>1</label></div>
+              <div class="option"><input type="radio" name="q6" value="2"><label>2</label></div>
+              <div class="option"><input type="radio" name="q6" value="3"><label>3</label></div>
+              <div class="option"><input type="radio" name="q6" value="4"><label>4</label></div>
+            </div>
+          </div>
+
+          <div class="question-card">
+            <div class="question-text">
+              7. Bagaimana pendapat Anda tentang perilaku petugas dalam pelayanan terkait kesopanan dan keramahan?
+            </div>
+            <div class="question-options">
+              <div class="option"><input type="radio" name="q7" value="1" required><label>1</label></div>
+              <div class="option"><input type="radio" name="q7" value="2"><label>2</label></div>
+              <div class="option"><input type="radio" name="q7" value="3"><label>3</label></div>
+              <div class="option"><input type="radio" name="q7" value="4"><label>4</label></div>
+            </div>
+          </div>
+
+          <div class="question-card">
+            <div class="question-text">
+              8. Bagaimana pendapat Anda tentang kualitas sarana dan prasarana?
+            </div>
+            <div class="question-options">
+              <div class="option"><input type="radio" name="q8" value="1" required><label>1</label></div>
+              <div class="option"><input type="radio" name="q8" value="2"><label>2</label></div>
+              <div class="option"><input type="radio" name="q8" value="3"><label>3</label></div>
+              <div class="option"><input type="radio" name="q8" value="4"><label>4</label></div>
+            </div>
+          </div>
+
+          <div class="question-card">
+            <div class="question-text">
+              9. Bagaimana pendapat Anda tentang penanganan pengaduan pengguna layanan?
+            </div>
+            <div class="question-options">
+              <div class="option"><input type="radio" name="q9" value="1" required><label>1</label></div>
+              <div class="option"><input type="radio" name="q9" value="2"><label>2</label></div>
+              <div class="option"><input type="radio" name="q9" value="3"><label>3</label></div>
+              <div class="option"><input type="radio" name="q9" value="4"><label>4</label></div>
+            </div>
+          </div>
+
         </div>
+
+        <input type="hidden" name="q4_bpjs" id="q4-bpjs" value="">
+
+        <div class="complaint-note">
+          Masukan Anda sangat berarti bagi kami untuk meningkatkan kualitas layanan
+        </div>
+
         <button type="submit" class="submit-btn">Kirim Kuesioner</button>
       </form>
     </div>
@@ -502,6 +492,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   const q4Section = document.getElementById('question-q4');
   const q4Radios = document.querySelectorAll('input[name="q4"]');
   const q4Bpjs = document.getElementById('q4-bpjs');
+  const SERVICE_LOCKED = <?php echo $service_locked ? 'true' : 'false'; ?>;
+
+  if (!SERVICE_LOCKED) {
+    document.querySelectorAll('input[name="service"]').forEach(radio => {
+      radio.addEventListener('change', () => {
+        const val = radio.value;
+        const url = new URL(window.location.href);
+        url.searchParams.set('service', val);
+        // arahkan ke URL baru
+        window.location.href = url.toString();
+      });
+    });
+  }
 
   function disableQ4() {
     if (!q4Section) return;
@@ -519,8 +522,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
   bpjsRadio?.addEventListener('change', disableQ4);
   umumRadio?.addEventListener('change', enableQ4);
+
+  // optional: kalau user reload dalam kondisi BPJS sudah kepilih, langsung disable q4
+  if (bpjsRadio && bpjsRadio.checked) disableQ4();
 </script>
 
 </body>
 </html>
-        
