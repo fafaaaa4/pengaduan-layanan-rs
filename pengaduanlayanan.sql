@@ -100,6 +100,39 @@ CREATE TABLE kuesioner (
   CONSTRAINT chk_q9 CHECK (q9 BETWEEN 1 AND 4)
 );
 
+CREATE TABLE IF NOT EXISTS keluhan (
+  id BIGSERIAL PRIMARY KEY,
+  created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+  nama_pasien TEXT NOT NULL,
+  alamat TEXT NOT NULL,
+  nomor_hp TEXT NOT NULL,
+  keluhan TEXT
+);
+
+CREATE TABLE IF NOT EXISTS kepuasan (
+  id BIGSERIAL PRIMARY KEY,
+  created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+
+  survey_date DATE NOT NULL,
+  survey_time VARCHAR(20) NOT NULL,
+
+  gender VARCHAR(20) NOT NULL,
+  education VARCHAR(20) NOT NULL,
+  jobs TEXT NOT NULL,
+  services VARCHAR(50) NOT NULL,
+
+  q1 SMALLINT NOT NULL,
+  q2 SMALLINT NOT NULL,
+  q3 SMALLINT NOT NULL,
+  q4 SMALLINT NOT NULL,
+  q5 SMALLINT NOT NULL,
+  q6 SMALLINT NOT NULL,
+  q7 SMALLINT NOT NULL,
+  q8 SMALLINT NOT NULL,
+  q9 SMALLINT NOT NULL,
+
+  penjamin VARCHAR(10) NOT NULL
+);
 -- ========== SEED DATA ==========
 
 INSERT INTO asuransi (id, nama_asuransi) VALUES
